@@ -33,11 +33,49 @@ export const hamburger = document.createElement("button");
 hamburger.className = "cs-loading";
 hamburger.addEventListener("click", toggleMiniSakai);
 
+const getMiniSakaiButtonContainer = (): Element | null => {
+    return (
+        document.getElementById("loginLinksImage")?.parentElement ??
+        document.querySelector("header.portal-header")
+    );
+};
+
+const getMiniSakaiMountPoint = (): { parent: Element; ref: Element | null } | null => {
+    const portalContainer = document.querySelector(".portal-container");
+    if (portalContainer !== null) {
+        return {
+            parent: portalContainer,
+            ref: document.querySelector(".portal-main-container")
+        };
+    }
+
+    const pageBody = document.getElementById("pageBody");
+    if (pageBody !== null) {
+        return {
+            parent: pageBody,
+            ref: null
+        };
+    }
+
+    return null;
+};
+
+const getColorSettingsRoot = (isSubSakai: boolean): HTMLElement | null => {
+    if (isSubSakai) {
+        return document.querySelector("#subSakai");
+    }
+
+    return (
+        (document.querySelector(".portal-container") as HTMLElement | null) ??
+        (document.querySelector("header.portal-header") as HTMLElement | null)
+    );
+};
+
 /**
  * Create a button to open miniSakai
  */
 export function createMiniSakaiBtn(): void {
-    const topbar = document.getElementById("mastLogin");
+    const topbar = getMiniSakaiButtonContainer();
     try {
         topbar?.appendChild(hamburger);
     } catch (e) {
@@ -49,19 +87,18 @@ export function createMiniSakaiBtn(): void {
  * Insert miniSakai into Sakai.
  */
 export function createMiniSakai(hostname: string) {
-    const parent = document.getElementsByClassName("Mrphs-mainHeader")[0];
-    const ref = document.getElementsByClassName("Mrphs-sites-nav")[0];
-    parent?.insertBefore(miniSakai, ref);
+    const mountPoint = getMiniSakaiMountPoint();
+    if (mountPoint !== null) {
+        mountPoint.parent.insertBefore(miniSakai, mountPoint.ref);
+    }
     const root = createRoot(miniSakai);
     root.render(<MiniSakaiRoot subset={false} hostname={hostname} />);
 }
 
 export const applyColorSettings = (settings: Settings, isSubSakai: boolean): void => {
-    let bodyStyles: HTMLElement;
-    if (!isSubSakai) {
-        bodyStyles = document.querySelector(".Mrphs-mainHeader") as HTMLElement;
-    } else {
-        bodyStyles = document.querySelector("#subSakai") as HTMLElement;
+    const bodyStyles = getColorSettingsRoot(isSubSakai);
+    if (bodyStyles === null) {
+        return;
     }
     for (const colorName of Object.getOwnPropertyNames(settings.color)) {
         // @ts-ignore

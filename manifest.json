@@ -21,7 +21,7 @@
       "css": [
         "css/comfortable-sakai.css"
       ],
-      "matches": ["https://panda.ecs.kyoto-u.ac.jp/*"]
+      "matches": ["https://lms.gakusei.kyoto-u.ac.jp/*"]
     }
   ],
   "background": {
@@ -40,7 +40,7 @@
         "img/closeBtn.svg",
         "assets/pdf.worker.mjs"
       ],
-      "matches": ["https://panda.ecs.kyoto-u.ac.jp/*"]
+      "matches": ["https://lms.gakusei.kyoto-u.ac.jp/*"]
     }
   ]
 }
