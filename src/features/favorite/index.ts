@@ -7,15 +7,19 @@ import { getCourseSiteID } from "../../utils";
 const MAX_FAVORITES = 100;
 
 const getSiteIdAndHrefSiteNameMap = (): Map<string, { href: string, title: string }> => {
-    const sites = document.querySelectorAll(".fav-sites-entry");
     const map = new Map<string, { href: string; title: string }>();
-    sites.forEach((site) => {
-        const siteId = site.querySelector(".site-favorite-btn")?.getAttribute("data-site-id");
-        if (siteId == null) return;
-        const href = (site.querySelector(".fav-title")?.childNodes[1] as HTMLAnchorElement).href;
-        const title = (site.querySelector(".fav-title")?.childNodes[1] as HTMLAnchorElement).title;
-        map.set(siteId, { href: href, title: title });
+    document.querySelectorAll(".site-list-item[data-site]").forEach((site) => {
+        const siteId = site.getAttribute("data-site");
+        const anchor = site.querySelector(".sidebar-site-title") as HTMLAnchorElement | null;
+        if (siteId == null || anchor == null) return;
+        if (!map.has(siteId)) {
+            map.set(siteId, {
+                href: anchor.href,
+                title: anchor.title || anchor.textContent?.trim() || siteId
+            });
+        }
     });
+
     return map;
 };
 
@@ -23,15 +27,35 @@ const getSiteIdAndHrefSiteNameMap = (): Map<string, { href: string, title: strin
  * Get hrefs of sites in favorite bar
  */
 const getCurrentFavoritesSite = (): Array<string> => {
-    const topnav = document.querySelector("#topnav");
-    if (topnav == null) return new Array<string>();
-    const sites = topnav.querySelectorAll(".Mrphs-sitesNav__menuitem");
-    const hrefs: Array<string> = [];
-    for (const site of Array.from(sites)) {
-        const href = (site.getElementsByClassName("link-container")[0] as HTMLAnchorElement).href;
-        hrefs.push(href);
-    }
-    return hrefs;
+    const sidebar = document.querySelector("#pinned-site-list, #recent-site-list, #portal-nav-sidebar");
+    if (sidebar == null) return new Array<string>();
+    return Array.from(sidebar.querySelectorAll(".site-list-item[data-site] .sidebar-site-title"))
+        .map((site) => (site as HTMLAnchorElement).href)
+        .filter((href) => href.length > 0);
+};
+
+const createSidebarFavoriteItem = (siteId: string, href: string, title: string): HTMLLIElement => {
+    const li = document.createElement("li");
+    li.className = "site-list-item py-1";
+    li.dataset.site = siteId;
+    li.dataset.type = "pinned";
+
+    const head = document.createElement("div");
+    head.className = "site-list-item-head d-flex align-items-center pe-2 py-1 w-100 justify-content-between";
+
+    const linkBlock = document.createElement("div");
+    linkBlock.className = "site-link-block d-flex align-items-center rounded-end me-1 pe-2";
+
+    const anchor = document.createElement("a");
+    anchor.className = "sidebar-site-title";
+    anchor.href = href;
+    anchor.title = title;
+    anchor.innerText = title;
+
+    linkBlock.appendChild(anchor);
+    head.appendChild(linkBlock);
+    li.appendChild(head);
+    return li;
 };
 
 /**
@@ -39,8 +63,8 @@ const getCurrentFavoritesSite = (): Array<string> => {
  * @param {string} baseURL
  */
 export const addFavoritedCourseSites = (baseURL: string): Promise<void> => {
-    const topnav = document.querySelector("#topnav");
-    if (topnav == null) return new Promise((resolve) => resolve());
+    const pinnedSiteList = document.querySelector("#pinned-site-list, #recent-site-list");
+    if (pinnedSiteList == null) return new Promise((resolve) => resolve());
     const request = new XMLHttpRequest();
     request.open("GET", baseURL + "/portal/favorites/list");
     request.responseType = "json";
@@ -68,17 +92,7 @@ export const addFavoritedCourseSites = (baseURL: string): Promise<void> => {
                 // skip if the site is already shown
                 if (currentFavoriteSite.find((c) => c == href) != null) continue;
 
-                const li = document.createElement("li");
-                li.classList.add("Mrphs-sitesNav__menuitem");
-                const anchor = document.createElement("a");
-                anchor.classList.add("link-container");
-                anchor.href = href;
-                anchor.title = title;
-                const span = document.createElement("span");
-                span.innerText = title;
-                anchor.appendChild(span);
-                li.appendChild(anchor);
-                topnav.appendChild(li);
+                pinnedSiteList.appendChild(createSidebarFavoriteItem(favorite, href, title));
             }
             resolve();
         });

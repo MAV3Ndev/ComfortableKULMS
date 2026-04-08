@@ -14,25 +14,38 @@ export const getBaseURL = (): string => {
     return baseURL;
 };
 
+const shouldSkipCourse = (courseId: string): boolean => {
+    return courseId.startsWith("~") || courseId.startsWith("!");
+};
+
+const addCourse = (courses: Map<string, Course>, course: Course): void => {
+    if (shouldSkipCourse(course.id) || courses.has(course.id)) {
+        return;
+    }
+    courses.set(course.id, course);
+};
+
 /* Sakai のお気に入り欄からCourseを取得する */
 export const fetchCourse = (): Array<Course> => {
     const baseURL = getBaseURL();
-    const elementCollection = document.getElementsByClassName("fav-sites-entry");
-    const elements = Array.prototype.slice.call(elementCollection);
-    const courses: Array<Course> = [];
-    for (const elem of elements) {
-        const name = elem.getElementsByTagName("div")[0].getElementsByTagName("a")[0];
-        const m = name.href.match("(https?://[^/]+)/portal/site-?[a-z]*/([^/]+)");
-        if (m && m[2][0] !== "~") {
-            const course: Course = {
-                id: m[2],
-                name: name.title,
-                link: baseURL + "/portal/site/" + m[2]
-            };
-            courses.push(course);
+    const courses = new Map<string, Course>();
+
+    const sidebarEntries = Array.from(document.querySelectorAll(".site-list-item[data-site]"));
+    for (const elem of sidebarEntries) {
+        const anchor = elem.querySelector(".sidebar-site-title") as HTMLAnchorElement | null;
+        const courseId = elem.getAttribute("data-site");
+        if (anchor === null || courseId === null) {
+            continue;
         }
+
+        addCourse(courses, {
+            id: courseId,
+            name: anchor.title || anchor.textContent?.trim() || courseId,
+            link: anchor.href || baseURL + "/portal/site/" + courseId
+        });
     }
-    return courses;
+
+    return Array.from(courses.values());
 };
 
 /* Sakai APIから課題を取得する */
